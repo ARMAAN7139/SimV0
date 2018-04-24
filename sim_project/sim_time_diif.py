@@ -4,17 +4,20 @@ import matplotlib.pyplot as plt
 import sys
 import os
 import time as tm
-
-
-
-"""
-assuming the env.now is  in microsecond. 
+import pprint
 
 
 """
+assuming the env.now is  in smicrosecond. 
 
-mon_t = []
-que_len = []
+
+"""
+
+mon_t = []  # list for keeping track of time for graphs. 
+que_len = []   # list for que_len in packet size
+Compression = []  # list for difference betweet MG and EG
+Decompression = []
+No_change = []
 def monitor(env, res, time_delay):
     while True: 
         mon_t.append(env.now)
@@ -25,23 +28,28 @@ def expected_Gap():
     st = 1500  #size of the trailing packet. 
     li = 100 #link rate respectivley
     sh = 64  #size of the heading packet
-    delta = abs((st/li) - (sh/li))  # dispercsiom gap calculation
-    EG = abs((st/li) + delta)  #expected gap calculation. take absolute value of it
+    power6 = 10 ** 6
+    delta = abs((st*8/li*power6) - (sh/li))  # dispercsiom gap calculation
+    EG = abs((st*8/li*power6) + delta)  #expected gap calculation. take absolute value of it
     print("eg is : "+ str( EG))
     return EG
 
 #mthod ot calculate measured gap.
 def measured_Gap(EG, tqh, tqt): 
     MG = abs(EG - (tqh - tqt))
+    print("MG is : " + str(MG))
     return MG
-
-
 #method to compare the result. 
 def compare_result(EG, MG):
-    data = []
-    if EG > MG: 
-        data.append()
-
+    if EG > MG:
+        Compression.append(MG - EG)
+    elif EG < MG: 
+        Decompression.append(MG - EG)
+    elif EG == MG: 
+        No_change.append(str(MG) + "   "+   str(EG))
+    else: 
+       print("THIS IS NOT WORKING")
+    
 
 
 #calling resource method 
@@ -66,15 +74,27 @@ def calc_rate(mbps, pkt_size):
     rate = (pkt_size *byte)/(mbps * micro_sec)
     return rate
 
+
+# log both values recorded from the ph and pt Despercision gaps. 
+def log(arrivals, depature,Compression): 
+    with open("C:\\Users\\Joykill\\Desktop\\sim_project\\logs.txt", "a+") as wr:
+        wr.write("**********************______Arrivals_____***************************************************" + "\n")
+        wr.write("\t\t\t" + str(arrivals) + "\n")
+        wr.write("**********************______Departure____*****************************************" + "\n")
+        wr.write("\t\t\t" + str(depature) + "\n")
+        wr.write("*********************_______Compression________***************************************"+ "\n")
+        wr.write(str(Compression)+ "\n")
+        wr.write("----------------------------------time is:  " + tm.strftime("%Y%m%d-%H%M%S")+'---------------------------\n')
+    
     
 def cross_traffic_gen(env):
     #out_rate = int(input('Enter the output link rate in Mbps: '))
+   
     out_rate = 100
-
-    pkt_Size = int(input('Eneter the packet size in bytes: '))
-    #pkt_Size = 64
-    link_speed = int(input('Enter the input link rate in Mbps: '))
-    #link_speed = 100
+    #pkt_Size = int(input('Eneter the packet size in bytes: '))
+    pkt_Size = np.random.uniform(10, 1500)
+    #link_speed = int(input('Enter the input link rate in Mbps: '))
+    link_speed = 100
     inpt_rate = calc_rate(link_speed, pkt_Size)
     outpt_rate = calc_rate(out_rate, pkt_Size)
     
@@ -98,47 +118,33 @@ def cross_traffic_gen(env):
     except KeyboardInterrupt:
         print ('Resuming...')
     """
-    flow1 = float(input('flow 1 rate in mbps: '))
-    #flow1 = np.random.uniform(20.6, 30.8)
+    #flow1 = float(input('flow 1 rate in mbps: '))
+    flow1 = np.random.uniform(0, 10.0)
     flow1_rate = calc_rate(flow1,pkt_Size)
-    flow2 = float(input('flow 2 rate in mbps: '))
-    #flow2 = np.random.uniform(1.0,20.3 )
-   
+    #flow2 = float(input('flow 2 rate in mbps: '))
+    flow2 = np.random.uniform(0, 30.0)
     flow2_rate = calc_rate(flow2,pkt_Size)
-    flow3 = float(input('flow 3 rate in mbps: '))
-    #flow3 = np.random.uniform(10.1, 25.5 )
+    #flow3 = float(input('flow 3 rate in mbps: '))
+    flow3 = np.random.uniform(10.1, 25.5 )
     flow3_rate = calc_rate(flow3,pkt_Size)
-    flow4 = float(input('flow 4 rate in mbps: '))
-    #flow4 = np.random.uniform(1.1, 20.5)
+    #flow4 = float(input('flow 4 rate in mbps: '))
+    flow4 = np.random.uniform(20, 30.5)
     flow4_rate = calc_rate(flow4,pkt_Size)
-    """
-    #put rates in ascending order. 
-    flows = [flow1_rate, flow2_rate, flow3_rate]
-    asc_order = sorted(flows)
-    sml_rate = asc_order[0]
-    med_rate = asc_order[1]
-    lrg_rate = asc_order[2]
-    """
-    print(flow1_rate, flow2_rate, flow3_rate)
+
+    print("Flow rates are: " + str(flow1_rate) +";\t "+ str(flow2_rate) + ";\t "+str(flow3_rate)+"; \t"+ str(flow4_rate))
     t_flow = flow1 + flow2 + flow3 + flow4
     if t_flow > out_rate:# the total flow can not exceed  output link 
-        
         print('Total flow can not be more than {}mbps input link'.format(out_rate))
         sys.exit()
 
     """
     with open("C:\\Users\\Joykill\\Desktop\\sim_project\\usrinpt_100mpbs.txt", "a+") as f: 
         t = (str(flow1_rate) + '|' + str(flow2_rate)+' |' + str(flow3_rate) + '|' + str(flow4_rate))
-        f.write(str(flow1))
-        f.write('\n')
-        f.write(str(flow2))
-        f.write('\n')
-        f.write(str(flow3))
-        f.write('\n')
-        f.write(str(flow4))
-        f.write('\n')
-        f.write(t)
-        f.write('\n')
+        f.write"\t\t\t" +(str(flow1) + '\n')
+        f.write("\t\t\t" +str(flow2)+ '\n')
+        f.write("\t\t\t" +str(flow3)+ '\n')
+        f.write("\t\t\t" +str(flow4)+ '\n')
+        f.write(t+ '\n')
         f.write("time is:  " + tm.strftime("%Y%m%d-%H%M%S")+'---------------------------\n')
     """
     return inpt_rate, outpt_rate, flow1_rate, flow2_rate, flow3_rate, pkt_Size, flow4_rate
@@ -178,18 +184,16 @@ class PacketGenerator(object):
             p = Packet(self.env.now, self.sdist, self.packets_sent, src=self.id, flow_id=self.flow_id)
             self.out.put(p)
 class PacketSink(object):
-    def __init__(self, env, out_rate, rec_arrivals=False, absolute_arrivals=False, rec_departure=False, absolute_departure=False, rec_waits=True, debug=False, selector=None):
+    def __init__(self, env, out_rate, rec_arrivals=False, rec_departure=False, rec_waits=True, debug=False, selector=None):
         self.res = simpy.Resource(env, capacity=1)
         self.env = env
         self.rec_waits = rec_waits
         self.rec_arrivals = rec_arrivals
         self.rec_departure = rec_departure
-        self.absolute_arrivals = absolute_arrivals
-        self.absolute_departure = absolute_departure
         self.waits_ph = []
         self.waits_pt = []
-        self.arrivals = []
-        self.departure = []
+        self.arrivals = {}
+        self.departure = {}
         self.debug = debug
         self.packets_rec = 0
         self.bytes_rec = 0
@@ -203,47 +207,66 @@ class PacketSink(object):
         if not self.selector or self.selector(pkt):
             tqh = 0.0
             tqt = 0.0
+            tqh_a = 0.0
+            tqh_d = 0.0
+            tqt_a = 0.0
+            tqt_d = 0.0
+           
             #record time delay
             now = self.env.now 
-            if self.rec_waits:
-                if pkt.src == "ph":
-                    tqh = self.env.now - pkt.time
-                    self.waits_ph.append(self.env.now - pkt.time)
-                elif pkt.src == "pt":
-                    tqt = self.env.now - pkt.time
-                    self.waits_pt.append(self.env.now - pkt.time)
-            EG = expected_Gap()
-            measured_Gap(EG,tqh, tqt)
-                    
             #record arrival time.
             if self.rec_arrivals:
-                if self.absolute_arrivals:
-                    if pkt.src == "ph" or  pkt.src == "pt":
-                        self.arrivals.append(now)
-                    else:
-                        self.arrivals.append(now - self.last_arrival)
-                    self.last_arrival = now
+                if pkt.src == "ph":
+                    tqh_a = (now - self.last_arrival)
+                    try:
+                        self.arrivals["ph"].append(now - self.last_arrival)
+                    except: 
+                        self.arrivals["ph"] = [now - self.last_arrival]
+                elif pkt.src == "pt":
+                    tqt_a = (now - self.last_arrival)
+                    try:
+                        self.arrivals["pt"].append(now - self.last_arrival)
+                    except:
+                        self.arrivals["pt"] = [now - self.last_arrival]
+                self.last_arrival = now
             self.packets_rec += 1
             self.bytes_rec += pkt.size
-
+            
             #call resrouce(router)
             env.process(call_res(self.res,self.env,pkt.src,self.out_rate))
-
+           
             #record departure time.
             if self.rec_departure: 
-                if self.absolute_departure:
-                    if pkt.src == "ph" or  pkt.src == "pt":
-                        self.departure.append(now)
-                    else: 
-                        self.departure.append(now - self.last_departure)
-                    self.last_departure = now
+                if pkt.src == "ph":
+                    tqh_d = (now - self.last_departure)
+                    try:
+                        self.departure["ph"].append(now - self.last_departure)
+                    except:
+                        self.departure["ph"] = [now - self.last_departure]
+                elif pkt.src == "pt":
+                    tqt_d = (now - self.last_departure)
+                    try:
+                        self.departure["pt"].append(now - self.last_departure)
+                    except:
+                        self.departure["pt"] = [now - self.last_departure]
+                self.last_departure = now
+
+            tqh = tqh_d - tqh_a     # substaract arrival - departure   for heading packet
+            tqt = tqt_d - tqt_a     # substract departure - arrival  for trailing packet
+            EG = expected_Gap()
+            MG = measured_Gap(EG,tqh, tqt)
+            print("MG:" + str(MG))
+            print("EG: "+ str(EG))
+            compare_result(EG, MG)
+
+           
             
             #print the packet if debug is set to true. 
             if self.debug:
                 print(pkt)
         
 #tmp var time = int(input('Enter time in Micro seconds, how long you want to run the simulation for: ')) 
-time = 0.001
+time = 0.01
 microsec_time = time / 10**6  # put this in run variables. 
 env = simpy.Environment()
 #res = simpy.Resource(env,capacity=1)
@@ -258,9 +281,9 @@ p3  = PacketGenerator(env,'flow4',pram[6],pram[5])
 #Probing packets with no Intraprobe gap. 
 ph  = PacketGenerator(env,'ph',0.00000512, 64 )
 pt  = PacketGenerator(env, 'pt',0.00012, 1500)
+packet = PacketGenerator()
 
-
-ps  = PacketSink(env,pram[1],debug=True)
+ps  = PacketSink(env,pram[1],debug=True,rec_arrivals=True, rec_departure=True)
 p0.out = ps 
 p1.out = ps 
 p2.out = ps
@@ -278,6 +301,10 @@ plt.ylabel('Queue length(packets)')
 #picName = "plot" + tm.strftime("%Y%m%d-%H%M%S") + '.png'
 #plt.savefig(os.sep.join([os.path.expanduser('~'), 'Desktop\\plots_100mpbs', picName ]))
 plt.show()
-print(ps.waits_ph)
-print("*****************************pt***************************************")
-print(ps.waits_pt)
+#format the list to view 6 decimal points
+pprint.pprint(ps.arrivals)
+print("******************************************************************")
+pprint.pprint(ps.departure)
+
+if len(Compression) >= 1: 
+    log(ps.arrivals,ps.departure,Compression)
